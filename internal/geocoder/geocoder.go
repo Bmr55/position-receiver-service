@@ -2,6 +2,7 @@ package geocoder
 
 import (
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"strconv"
@@ -45,6 +46,7 @@ type ReverseGeocodeResponse struct {
 	DisplayName string      `json:"display_name"`
 	Address     Address     `json:"address"`
 	BoundingBox []string    `json:"boundingbox"`
+	Error       string      `json:"error"`
 }
 
 func (n NominatimGeocoder) ReverseGeocode(latitude float64, longitude float64) (ReverseGeocodeResponse, error) {
@@ -57,9 +59,17 @@ func (n NominatimGeocoder) ReverseGeocode(latitude float64, longitude float64) (
 		return ReverseGeocodeResponse{}, reqErr
 	}
 
-	var reverseGeocodeResp ReverseGeocodeResponse
+	reverseGeocodeResp := ReverseGeocodeResponse{Address: Address{HouseNumber: "-1", Postcode: "-1"}}
 
-	json.Unmarshal(byteResp, &reverseGeocodeResp)
+	unmarshalErr := json.Unmarshal(byteResp, &reverseGeocodeResp)
+
+	if unmarshalErr != nil {
+		return ReverseGeocodeResponse{}, unmarshalErr
+	}
+
+	if reverseGeocodeResp.Error != "" {
+		return ReverseGeocodeResponse{}, errors.New(reverseGeocodeResp.Error)
+	}
 
 	return reverseGeocodeResp, nil
 }
